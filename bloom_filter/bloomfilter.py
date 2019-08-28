@@ -22,3 +22,7 @@ for name in ['Harry', 'Larry', 'Moe']:
     have_i_met(name)
     meet(name)
     have_i_met(name)
+
+print("Harr" in have_met)
+print("Larr" in have_met)
+print("Mo" in have_met)
