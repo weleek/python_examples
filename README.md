@@ -18,3 +18,6 @@ bloomfilter 예제 홈페이지 예제 실행 및 주석 작성 완료.
 protobuf 에제 사용법 작성 완료
 
 heap 자료구조 생성 작성중.
+
+class_attribute \__slots\__ 속성 설명 작성 완료.
+
