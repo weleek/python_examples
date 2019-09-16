@@ -21,3 +21,6 @@ heap 자료구조 생성 작성중.
 
 class_attribute \__slots\__ 속성 설명 작성 완료.
 
+util 공통 사용 가능 함수 작성 추가.
+
+
