@@ -2,15 +2,13 @@
 
 import sys
 import CommandShell as cs
-import docopt
 
 
 if __name__ == '__main__':
     args = cs.parse_command(sys.argv[1:])
-    #args = docopt.docopt(__doc__, argv=sys.argv[1:], version='0.1.0')
 
-    #if args['--version']:
-
-    #if args['--interactive']:
-    #    cli = cs.CommandShell('Program')
-    #    cli.cmdloop()
+    if args['--interactive']:
+        cli = cs.CommandShell('Program')
+        cli.cmdloop()
+    else:
+        cs.run_subcommand(args)
