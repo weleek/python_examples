@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Flask and mongodb sample web project.
+
+    Usage:
+        admin_console -h | --help | --version
+        admin_console web [--debug] (--start | --stop | --status)
+        admin_console database (--start | --stop | --status)
+        admin_console console
+        admin_console build
+        admin_console install
+        admin_console clean
+
+    Commands:
+        web         Flask web server.
+        database    MongoDB Server.
+        console     Enter the command line interface.
+        build       Compile project and zip.
+        install     install python libs.
+        clean       remove dist directory.
+
+    Options:
+        -h --help   help document.
+        --version   verbose mode
+        --debug     development(templates auto reload) mode.
+"""
+import os
+import sys
+import cmd
+import docopt
+import platform
+import web
+import database
+import utils
+from colorama import Fore, Style
+
+WORK_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
+
+def argv_init(argv=None):
+    return docopt.docopt(__doc__, argv, version='0.0.1')
+
+
+def run_subcommand(args):
+    options = []
+    cmd = ''
+    for k, v in args.items():
+        if k[:2] != '--' and v == True:
+            cmd = k
+            continue
+
+        if k[:2] == '--' and v == True:
+            options.append(k)
+
+    if cmd:
+        os.system(f'make {cmd} {" ".join(options)}')
+
+
+def colorize(s, color):
+    color = eval(f'Fore.{color.upper()}')
+    return f'{color}{s}{Style.RESET_ALL}'
+
+
+class QuitException(Exception):
+    pass
+
+
+class ArgsException(Exception):
+    pass
+
+
+
+class CommandShell(cmd.Cmd):
+    """Common command shell interface."""
+
+    def _clear(self):
+        os.system("cls" if platform.system().lower() == "windows" else "clear")
+
+    def __init__(self, name):
+        """
+        Create common shell class
+        """
+        cmd.Cmd.__init__(self)
+        self.intro = """================================ Management Program ==============================================
+[P] Process task.
+[Q] Quit."""
+        self.step = 1
+        self.help_text = "press <Tab> to expand command or type ? to get any helps."
+        self.prompt = f'{colorize(name, "lightgreen_ex")} > '
+        self.choice = False
+
+    def emptyline(self):
+        """빈 입력값인 경우 마지막 명령어를 실행하는게 기본이나 마지막 명령어 반복을 막기 위해 해당 메서드 재정의"""
+        self._clear()
+        print(self.intro)
+        print("Please select a Menu")
+        pass
+
+    def default(self, line):
+        """입력값의 맞는 실행 함수가 없는 경우 실행"""
+        if not self.choice:
+            self._clear()
+            print(f"Please select a Menu.\nDoes not exists. [{line}]")
+        pass
+
+
+    def get_cmd(self, cmd):
+        """기본 규칙인 함수 앞에 do_ 를 붙인 함수명을 반환하지 않도록 커스텀 하기 위한 함수."""
+        func_list = self.get_names()
+        cmd = f'cmd_{cmd}'
+        for func_name in func_list:
+            if func_name.startswith(cmd):
+                cmd = func_name
+                break
+        return cmd
+
+    def onecmd(self, line):
+        """기본 명령 실행 함수."""
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if line == 'EOF':
+            self.lastcmd = ''
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, self.get_cmd(cmd))
+            except AttributeError:
+                return self.default(line)
+            return func(arg)
+
+    def cmd_process_task(self, arg):
+        """[P] Process controll task."""
+        self._clear()
+        self.step = 2
+        print('[W] Web service start')
+        print('[E] Web service shutdown.')
+        print('[R] Web service status.')
+        print('[D] Database service start.')
+        print('[F] Database service shutdown.')
+        print('[G] Database service status.')
+        print('[Q] quit.')
+
+    def cmd_quit(self, arg):
+        if self.step == 1:
+            return self._quit()
+        else:
+            self.step -= 1
+
+    def _quit(self):
+        raise QuitException("quit")
+
+    def cmdloop(self, intro=None):
+        while True:
+            try:
+                self._clear()
+                cmd.Cmd.cmdloop(self, intro)
+            except QuitException as qe:
+                print(f'{qe}')
+                break
+            except KeyboardInterrupt:
+                print('Program Exit...')
+                break
+            except ArgsException as e:
+                print(f"Error parsing arguments!\n {e}")
+                continue
+            except Exception as e:
+                print(f'Unknown Exception : {e}')
+                break
+
+
+if __name__ == '__main__':
+    try:
+        args = argv_init(sys.argv[1:])
+
+        if os.getcwd() != WORK_DIR:
+            os.chdir(WORK_DIR)
+
+        if args['console']:
+            CommandShell('Admin Console').cmdloop()
+
+        elif args['web']:
+            web.main(args)
+
+        elif args['database']:
+            database.main(args)
+
+        else:
+            run_subcommand(args)
+
+    except KeyboardInterrupt:
+        print('Program Exit...')
+        sys.exit(0)
+    except Exception as err:
+        utils.print_stack_trace()

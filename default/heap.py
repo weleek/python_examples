@@ -27,6 +27,3 @@ class heap:
 
 if __name__ == '__main__':
     h = heap()
-
-
-
