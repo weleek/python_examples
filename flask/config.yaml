@@ -1,0 +1,11 @@
+
+server:
+  port: 5000
+
+database:
+  type: mongodb
+
+debug:
+  level: debug
+
+decription: 한글 테스트

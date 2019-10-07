@@ -29,18 +29,26 @@ import sys
 import cmd
 import docopt
 import platform
-import web
-import database
-import utils
+from app import web
+from app import database
+from app.common import utils
+from app.exceptions.exceptions import QuitException, ArgsException
 from colorama import Fore, Style
+import yaml
 
 WORK_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
 
+
 def argv_init(argv=None):
-    return docopt.docopt(__doc__, argv, version='0.0.1')
+    conf = dict()
+    doc = docopt.docopt(__doc__, argv, version='0.0.1')
+    with open(f"{WORK_DIR}/config.yaml", 'r') as stream:
+        conf = yaml.safe_load(stream)
+    conf.update(doc)
+    return conf
 
 
-def run_subcommand(args):
+def run_sub_command(args):
     options = []
     cmd = ''
     for k, v in args.items():
@@ -60,53 +68,68 @@ def colorize(s, color):
     return f'{color}{s}{Style.RESET_ALL}'
 
 
-class QuitException(Exception):
-    pass
-
-
-class ArgsException(Exception):
-    pass
-
+def terminal_clear():
+    os.system("cls" if platform.system().lower() == "windows" else "clear")
 
 
 class CommandShell(cmd.Cmd):
     """Common command shell interface."""
-
-    def _clear(self):
-        os.system("cls" if platform.system().lower() == "windows" else "clear")
+    description = {"main":
+        {
+            1: """================================ Management Program ==============================================
+[P] Process task.
+[Q] Quit."""
+        },
+        "process task":
+        {
+            1: """================================== Process Task ==================================================
+[W] Web service start.
+[E] Web service shutdown.
+[R] Web service status.
+[D] Database service start.
+[F] Database service shutdown.
+[G] Database service status.
+[Q] quit.
+            """
+        }
+    }
 
     def __init__(self, name):
         """
         Create common shell class
         """
         cmd.Cmd.__init__(self)
-        self.intro = """================================ Management Program ==============================================
-[P] Process task.
-[Q] Quit."""
+        self.context = 'main'
+        self.prev_context = ''
         self.step = 1
+        self.intro = self.description[self.context][self.step]
         self.help_text = "press <Tab> to expand command or type ? to get any helps."
         self.prompt = f'{colorize(name, "lightgreen_ex")} > '
         self.choice = False
 
     def emptyline(self):
         """빈 입력값인 경우 마지막 명령어를 실행하는게 기본이나 마지막 명령어 반복을 막기 위해 해당 메서드 재정의"""
-        self._clear()
-        print(self.intro)
+        terminal_clear()
+        self.show_menu()
         print("Please select a Menu")
         pass
 
     def default(self, line):
         """입력값의 맞는 실행 함수가 없는 경우 실행"""
         if not self.choice:
-            self._clear()
+            terminal_clear()
             print(f"Please select a Menu.\nDoes not exists. [{line}]")
         pass
 
-
     def get_cmd(self, cmd):
         """기본 규칙인 함수 앞에 do_ 를 붙인 함수명을 반환하지 않도록 커스텀 하기 위한 함수."""
+        find_str = f'[{cmd.upper()}]'
+        word = [i for i in self.description[self.context][self.step].split('\n') if i.find(find_str) != -1]
+        if word == []:
+            return cmd
+
+        cmd = f"cmd{word[0].replace(find_str, '').lower().replace('.', '').replace(' ', '_')}"
         func_list = self.get_names()
-        cmd = f'cmd_{cmd}'
         for func_name in func_list:
             if func_name.startswith(cmd):
                 cmd = func_name
@@ -132,23 +155,28 @@ class CommandShell(cmd.Cmd):
                 return self.default(line)
             return func(arg)
 
+    def show_menu(self):
+        print(self.description[self.context][self.step])
+
     def cmd_process_task(self, arg):
         """[P] Process controll task."""
-        self._clear()
-        self.step = 2
-        print('[W] Web service start')
-        print('[E] Web service shutdown.')
-        print('[R] Web service status.')
-        print('[D] Database service start.')
-        print('[F] Database service shutdown.')
-        print('[G] Database service status.')
-        print('[Q] quit.')
+        terminal_clear()
+        self.prev_context = self.context
+        self.context = 'process task'
+        self.step = 1
+        self.show_menu()
 
     def cmd_quit(self, arg):
-        if self.step == 1:
+        if self.context == 'main' and self.step == 1:
             return self._quit()
         else:
-            self.step -= 1
+            if self.step > 1:
+                self.step -= 1
+            else:
+                self.context = self.prev_context
+
+            terminal_clear()
+            self.show_menu()
 
     def _quit(self):
         raise QuitException("quit")
@@ -156,7 +184,7 @@ class CommandShell(cmd.Cmd):
     def cmdloop(self, intro=None):
         while True:
             try:
-                self._clear()
+                terminal_clear()
                 cmd.Cmd.cmdloop(self, intro)
             except QuitException as qe:
                 print(f'{qe}')
@@ -174,25 +202,25 @@ class CommandShell(cmd.Cmd):
 
 if __name__ == '__main__':
     try:
-        args = argv_init(sys.argv[1:])
-
+        config = argv_init(sys.argv[1:])
         if os.getcwd() != WORK_DIR:
             os.chdir(WORK_DIR)
 
-        if args['console']:
+        if config['console']:
             CommandShell('Admin Console').cmdloop()
 
-        elif args['web']:
-            web.main(args)
+        elif config['web']:
+            web.main(config)
 
-        elif args['database']:
-            database.main(args)
+        elif config['database']:
+            database.main(config)
 
         else:
-            run_subcommand(args)
+            run_sub_command(config)
 
     except KeyboardInterrupt:
         print('Program Exit...')
         sys.exit(0)
     except Exception as err:
         utils.print_stack_trace()
+
