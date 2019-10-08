@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import os
-from flask import Flask
 import importlib
+from flask import Flask
+from wsgiref.simple_server import make_server
 
 MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
-app = Flask(__name__, template_folder=f'{MAIN_DIR}/app1/frontend/templates',
-            static_folder=f'{MAIN_DIR}/app1/frontend/static')
-database = None
+app = Flask(__name__, template_folder=f'{MAIN_DIR}/app/frontend/templates',
+            static_folder=f'{MAIN_DIR}/app/frontend/static')
 
 
 def blueprint_init():
@@ -26,9 +26,11 @@ def init(args):
     blueprint_init()
 
 
-def main(args):
+def web_start(args):
     try:
         init(args)
-        app.run()
+        #app.run()
+        httpd = make_server('', 8000, app)
+        httpd.serve_forever()
     except Exception as err:
         raise err

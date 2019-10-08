@@ -4,7 +4,7 @@
 
     Usage:
         admin_console -h | --help | --version
-        admin_console web [--debug] (--start | --stop | --status)
+        admin_console web [--debug] [--port=STRING] (--start | --stop | --status)
         admin_console database (--start | --stop | --status)
         admin_console console
         admin_console build
@@ -21,8 +21,9 @@
 
     Options:
         -h --help   help document.
-        --version   verbose mode
-        --debug     development(templates auto reload) mode.
+        --version   verbose mode.
+        --debug     flask development(templates auto reload) mode.
+        --port      flask port.
 """
 import os
 import sys
@@ -150,6 +151,7 @@ class CommandShell(cmd.Cmd):
             return self.default(line)
         else:
             try:
+                #print(f'{self.get_cmd(cmd)}')
                 func = getattr(self, self.get_cmd(cmd))
             except AttributeError:
                 return self.default(line)
@@ -165,6 +167,30 @@ class CommandShell(cmd.Cmd):
         self.context = 'process task'
         self.step = 1
         self.show_menu()
+
+    def cmd_database_service_start(self, arg):
+        """[D] Database service start."""
+        terminal_clear()
+        try:
+            database.database_start()
+        except Exception as e:
+            print(e)
+
+    def cmd_database_service_shutdown(self, arg):
+        """[F] Database service start."""
+        terminal_clear()
+        try:
+            database.database_shutdown()
+        except Exception as e:
+            print(e)
+
+    def cmd_database_service_status(self, arg):
+        """[G] Database service start."""
+        terminal_clear()
+        try:
+            database.database_status()
+        except Exception as e:
+            print(e)
 
     def cmd_quit(self, arg):
         if self.context == 'main' and self.step == 1:
@@ -223,4 +249,3 @@ if __name__ == '__main__':
         sys.exit(0)
     except Exception as err:
         utils.print_stack_trace()
-

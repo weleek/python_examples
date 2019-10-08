@@ -27,6 +27,7 @@ def database_init(app):
 
 
 def database_start():
+    print('Database start...')
     if check_database():
         raise ProcessException('Database is already running...')
 
@@ -44,6 +45,7 @@ def database_start():
 
 
 def database_shutdown():
+    print('Database stop...')
     if not check_database():
         raise ProcessException('Database is not running...')
 
@@ -51,6 +53,7 @@ def database_shutdown():
 
 
 def database_status():
+    print('Database status...')
     if not check_database():
         raise ProcessException('Database is not running...')
 
@@ -64,15 +67,15 @@ def database_status():
 def main(argv=None):
     try:
         if argv['--status']:
-            print('Database status...')
+
             database_status()
 
         elif argv['--start']:
-            print('Database start...')
+
             database_start()
 
         elif argv['--stop']:
-            print('Database stop...')
+
             database_shutdown()
 
         else:
