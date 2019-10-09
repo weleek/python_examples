@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 import os
-import psutil
+import sys
 import datetime
+
+import psutil
 from pathlib import Path
 from flask_mongoengine import MongoEngine
+
+MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
+PARENT_DIR = '/'.join(MAIN_DIR.split('/')[:-1])
+if PARENT_DIR not in sys.path:
+    sys.path.append(PARENT_DIR)
+
 from app.exceptions.exceptions import ProcessException
 
 MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
 DATABASE_HOME = f'{str(Path.home())}/mongodb/app'
-
-
-def check_database():
-    return ('mongod' in ( p.name() for p in psutil.process_iter()))
 
 
 def database_init(app):
@@ -24,6 +28,10 @@ def database_init(app):
     }
     database = MongoEngine()
     database.init_app(app)
+
+
+def check_database():
+    return ('mongod' in ( p.name() for p in psutil.process_iter()))
 
 
 def database_start():
@@ -59,8 +67,8 @@ def database_status():
 
     for p in psutil.process_iter():
         if p.name() == 'mongod':
-            print(f"{p.name()} {p.username()} {p.pid} {p.ppid()}", end="")
-            print(f"{datetime.datetime.fromtimestamp(p.create_time()).strftime('%Y-%m-%d %H:%M:%S')}", end="")
+            print(f"{p.name()} {p.username()} {p.pid} {p.ppid()}", end=" ")
+            print(f"{datetime.datetime.fromtimestamp(p.create_time()).strftime('%Y-%m-%d %H:%M:%S')}", end=" ")
             print(f"{' '.join(p.cmdline())}")
 
 

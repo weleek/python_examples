@@ -5,7 +5,5 @@ server:
 database:
   type: mongodb
 
-debug:
+logging:
   level: debug
-
-decription: 한글 테스트

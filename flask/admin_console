@@ -4,7 +4,7 @@
 
     Usage:
         admin_console -h | --help | --version
-        admin_console web [--debug] [--port=STRING] (--start | --stop | --status)
+        admin_console web [--debug] (--start | --stop | --status)
         admin_console database (--start | --stop | --status)
         admin_console console
         admin_console build
@@ -23,7 +23,6 @@
         -h --help   help document.
         --version   verbose mode.
         --debug     flask development(templates auto reload) mode.
-        --port      flask port.
 """
 import os
 import sys
@@ -95,11 +94,12 @@ class CommandShell(cmd.Cmd):
         }
     }
 
-    def __init__(self, name):
+    def __init__(self, name, config={}):
         """
         Create common shell class
         """
         cmd.Cmd.__init__(self)
+        self.config = config
         self.context = 'main'
         self.prev_context = ''
         self.step = 1
@@ -137,6 +137,10 @@ class CommandShell(cmd.Cmd):
                 break
         return cmd
 
+    def precmd(self, line):
+        terminal_clear()
+        return line
+
     def onecmd(self, line):
         """기본 명령 실행 함수."""
         cmd, arg, line = self.parseline(line)
@@ -162,7 +166,6 @@ class CommandShell(cmd.Cmd):
 
     def cmd_process_task(self, arg):
         """[P] Process controll task."""
-        terminal_clear()
         self.prev_context = self.context
         self.context = 'process task'
         self.step = 1
@@ -170,7 +173,6 @@ class CommandShell(cmd.Cmd):
 
     def cmd_database_service_start(self, arg):
         """[D] Database service start."""
-        terminal_clear()
         try:
             database.database_start()
         except Exception as e:
@@ -178,7 +180,6 @@ class CommandShell(cmd.Cmd):
 
     def cmd_database_service_shutdown(self, arg):
         """[F] Database service start."""
-        terminal_clear()
         try:
             database.database_shutdown()
         except Exception as e:
@@ -186,9 +187,29 @@ class CommandShell(cmd.Cmd):
 
     def cmd_database_service_status(self, arg):
         """[G] Database service start."""
-        terminal_clear()
         try:
             database.database_status()
+        except Exception as e:
+            print(e)
+
+    def cmd_web_service_start(self, arg):
+        """[W] Web service start."""
+        try:
+            web.web_start(self.config)
+        except Exception as e:
+            print(e)
+
+    def cmd_web_service_shutdown(self, arg):
+        """[E] Web service shutdown."""
+        try:
+            web.web_shutdown(self.config)
+        except Exception as e:
+            print(e)
+
+    def cmd_web_service_status(self, arg):
+        """[R] Web service status."""
+        try:
+            web.web_status(self.config)
         except Exception as e:
             print(e)
 
@@ -233,7 +254,7 @@ if __name__ == '__main__':
             os.chdir(WORK_DIR)
 
         if config['console']:
-            CommandShell('Admin Console').cmdloop()
+            CommandShell('Admin Console', config).cmdloop()
 
         elif config['web']:
             web.main(config)
@@ -246,6 +267,7 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         print('Program Exit...')
-        sys.exit(0)
+        sys.exit(1)
     except Exception as err:
-        utils.print_stack_trace()
+        print(f'{err}')
+        #utils.print_stack_trace()
