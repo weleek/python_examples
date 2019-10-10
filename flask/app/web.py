@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
+# default libs
 import os
-import sys
 import datetime
 import importlib
 import signal
 
+# 3rd party libs
 import psutil
 from flask import Flask
 
-MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
-PARENT_DIR = '/'.join(MAIN_DIR.split('/')[:-1])
-if PARENT_DIR not in sys.path:
-    sys.path.append(PARENT_DIR)
+# custom develop libs
+from exceptions.exceptions import ProcessException
 
-from app.exceptions.exceptions import ProcessException
+MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
 
 
 def web_init(app, argv):
@@ -35,21 +34,30 @@ def blueprint_init(app):
 
 def create_app(argv):
     app = Flask(__name__, template_folder=f'{MAIN_DIR}/frontend/templates',
-    static_folder=f'{MAIN_DIR}/frontend/static', static_url_path='/static')
+        static_folder=f'{MAIN_DIR}/frontend/static', static_url_path='/static')
     web_init(app, argv)
     return app
 
 
-def check_web():
+def get_pids():
+    result = []
     for p in psutil.process_iter():
-        if p.name() == 'gunicorn' and ''.join(p.cmdline()).find('flask_app') != -1:
-            return True
-    return False
+        try:
+            cmdlines = ' '.join(p.cmdline())
+            if cmdlines.find('flask_app') != -1 and cmdlines.find('gunicorn') != -1:
+                result.append(p.pid)
+        except:
+            continue
+    return result
+
+
+def check_service():
+    return len(get_pids()) > 0
 
 
 def web_start(argv):
     print("Web service start...")
-    if check_web():
+    if check_service():
         raise ProcessException('Web service is already running...')
 
     cmds = []
@@ -67,26 +75,26 @@ def web_start(argv):
     cmd = ' '.join(cmds)
     os.system(cmd)
 
+
 def web_shutdown(argv):
     print("Web service shutdown...")
-    if not check_web():
+    if not check_service():
         raise ProcessException('Web service is not running...')
 
-    for p in psutil.process_iter():
-        if p.name() == 'gunicorn' and ''.join(p.cmdline()).find('flask_app') != -1:
-            os.kill(p.pid, signal.SIGTERM)
+    for pid in get_pids():
+        os.kill(pid, signal.SIGTERM)
 
 
 def web_status(argv):
     print("Web service status...")
-    if not check_web():
+    if not check_service():
         raise ProcessException('Web service is not running...')
 
-    for p in psutil.process_iter():
-        if p.name() == 'gunicorn' and ''.join(p.cmdline()).find('flask_app') != -1:
-            print(f"{p.name()} {p.username()} {p.pid} {p.ppid()}", end=" ")
-            print(f"{datetime.datetime.fromtimestamp(p.create_time()).strftime('%Y-%m-%d %H:%M:%S')}", end=" ")
-            print(f"{' '.join(p.cmdline())}")
+    for pid in get_pids():
+        p = psutil.Process(pid)
+        print(f"{p.name()} {p.username()} {p.pid} {p.ppid()}", end=" ")
+        print(f"{datetime.datetime.fromtimestamp(p.create_time()).strftime('%Y-%m-%d %H:%M:%S')}", end=" ")
+        print(f"{' '.join(p.cmdline())}")
 
 
 def main(argv):

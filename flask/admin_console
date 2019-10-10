@@ -24,19 +24,27 @@
         --version   verbose mode.
         --debug     flask development(templates auto reload) mode.
 """
+# default libs
 import os
 import sys
 import cmd
-import docopt
 import platform
+import functools
+
+# 3rd party libs
+import yaml
+import docopt
+from colorama import Fore, Style
+
+# 하위 모듈에서 각 패키지별 모듈을 참조 하기 위한 참조 경로 추가.
+WORK_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
+sys.path.append(f'{WORK_DIR}/app')
+
+# custom develop libs
 from app import web
 from app import database
 from app.common import utils
 from app.exceptions.exceptions import QuitException, ArgsException
-from colorama import Fore, Style
-import yaml
-
-WORK_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
 
 
 def argv_init(argv=None):
@@ -72,6 +80,19 @@ def terminal_clear():
     os.system("cls" if platform.system().lower() == "windows" else "clear")
 
 
+def load_quit_input(func):
+    @functools.wraps(func)
+    def wrappers(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            print(e)
+        finally:
+            input('\n\nPlease enter to continue...')
+
+    return wrappers
+
+
 class CommandShell(cmd.Cmd):
     """Common command shell interface."""
     description = {"main":
@@ -81,8 +102,9 @@ class CommandShell(cmd.Cmd):
 [Q] Quit."""
         },
         "process task":
-        {
-            1: """================================== Process Task ==================================================
+            {
+                1: """================================== Process Task ==================================================
+[A] All service check.
 [W] Web service start.
 [E] Web service shutdown.
 [R] Web service status.
@@ -91,7 +113,7 @@ class CommandShell(cmd.Cmd):
 [G] Database service status.
 [Q] quit.
             """
-        }
+            }
     }
 
     def __init__(self, name, config={}):
@@ -155,14 +177,17 @@ class CommandShell(cmd.Cmd):
             return self.default(line)
         else:
             try:
-                #print(f'{self.get_cmd(cmd)}')
+                # print(f'{self.get_cmd(cmd)}')
                 func = getattr(self, self.get_cmd(cmd))
             except AttributeError:
                 return self.default(line)
             return func(arg)
 
     def show_menu(self):
-        print(self.description[self.context][self.step])
+        print(self.get_menu())
+
+    def get_menu(self):
+        return self.description[self.context][self.step]
 
     def cmd_process_task(self, arg):
         """[P] Process controll task."""
@@ -171,47 +196,41 @@ class CommandShell(cmd.Cmd):
         self.step = 1
         self.show_menu()
 
+    @load_quit_input
     def cmd_database_service_start(self, arg):
         """[D] Database service start."""
-        try:
-            database.database_start()
-        except Exception as e:
-            print(e)
+        database.database_start()
 
+    @load_quit_input
     def cmd_database_service_shutdown(self, arg):
         """[F] Database service start."""
-        try:
-            database.database_shutdown()
-        except Exception as e:
-            print(e)
+        database.database_shutdown()
 
+    @load_quit_input
     def cmd_database_service_status(self, arg):
         """[G] Database service start."""
-        try:
-            database.database_status()
-        except Exception as e:
-            print(e)
+        database.database_status()
 
+    @load_quit_input
     def cmd_web_service_start(self, arg):
         """[W] Web service start."""
-        try:
-            web.web_start(self.config)
-        except Exception as e:
-            print(e)
+        web.web_start(self.config)
 
+    @load_quit_input
     def cmd_web_service_shutdown(self, arg):
         """[E] Web service shutdown."""
-        try:
-            web.web_shutdown(self.config)
-        except Exception as e:
-            print(e)
+        web.web_shutdown(self.config)
 
+    @load_quit_input
     def cmd_web_service_status(self, arg):
         """[R] Web service status."""
-        try:
-            web.web_status(self.config)
-        except Exception as e:
-            print(e)
+        web.web_status(self.config)
+
+    @load_quit_input
+    def cmd_all_service_check(self, arg):
+        """[A] All service check."""
+        print(f'Web service is {"" if web.check_service() else "not"} running.')
+        print(f'Database service is {"" if database.check_service() else "not"} running.')
 
     def cmd_quit(self, arg):
         if self.context == 'main' and self.step == 1:
@@ -226,7 +245,7 @@ class CommandShell(cmd.Cmd):
             self.show_menu()
 
     def _quit(self):
-        raise QuitException("quit")
+        raise QuitException("bye.")
 
     def cmdloop(self, intro=None):
         while True:
@@ -270,4 +289,4 @@ if __name__ == '__main__':
         sys.exit(1)
     except Exception as err:
         print(f'{err}')
-        #utils.print_stack_trace()
+        # utils.print_stack_trace()
