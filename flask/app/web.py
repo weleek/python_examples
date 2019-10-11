@@ -8,11 +8,13 @@ import signal
 # 3rd party libs
 import psutil
 from flask import Flask
+from gevent.pywsgi import WSGIServer
 
 # custom develop libs
 from exceptions.exceptions import ProcessException
 
 MAIN_DIR = '/'.join(os.path.dirname(os.path.abspath(__file__)).split('/'))
+PARENT_DIR = '/'.join(MAIN_DIR.split('/')[:-1])
 
 
 def web_init(app, argv):

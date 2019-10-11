@@ -89,7 +89,8 @@ def load_quit_input(func):
             print(e)
         finally:
             input('\n\nPlease enter to continue...')
-
+            terminal_clear()
+            g_cmd_shell.show_menu()
     return wrappers
 
 
@@ -129,6 +130,8 @@ class CommandShell(cmd.Cmd):
         self.help_text = "press <Tab> to expand command or type ? to get any helps."
         self.prompt = f'{colorize(name, "lightgreen_ex")} > '
         self.choice = False
+        global g_cmd_shell
+        g_cmd_shell = self
 
     def emptyline(self):
         """빈 입력값인 경우 마지막 명령어를 실행하는게 기본이나 마지막 명령어 반복을 막기 위해 해당 메서드 재정의"""
